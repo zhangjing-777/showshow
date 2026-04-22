@@ -1,0 +1,26 @@
+onc:
+  host: 172.28.200.80
+  port: 18080
+  timeout: 30
+
+ssh:
+  default_user: root
+  default_password: ""
+  default_port: 22
+
+  # 跳板机配置（没有跳板机就删掉这段或留空）
+  jump_host:
+    host: 10.110.181.132
+    port: 2222
+    user: h20_public
+    password: "Public@12"
+
+  # 按节点覆盖SSH凭证（可选，交换机密码和服务器不同时用）
+  nodes:
+    # 172.28.200.101:        # 交换机IP
+    #   user: 58admin
+    #   password: yourpassword
+
+network:
+  roce_priority: 3        # RoCE流量的PFC Priority，P3或P4
+  config_cache_ttl: 300   # 设备配置缓存TTL，单位秒，默认5分钟

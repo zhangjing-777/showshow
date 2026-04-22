@@ -1,0 +1,51 @@
+$config = @"
+onc:
+  host: 10.110.183.79
+  port: 18080
+  timeout: 30
+
+ssh:
+  default_user: root
+  default_password: ""
+  default_port: 22
+
+  # 跳板机配置（没有跳板机就删掉这段或留空）
+  jump_host:
+    host: 10.110.181.132
+    port: 2222
+    user: h20_public
+    password: "Public@1234"
+
+  # 按节点覆盖SSH凭证（可选，交换机密码和服务器不同时用）
+  nodes:
+    10.110.183.168:        # 交换机IP SPINE1
+    user: admin
+    password: Rgsdn@2026
+
+    10.110.183.105:        # 交换机IP SPINE2
+    user: admin
+    password: Rgsdn@2026
+
+    10.110.183.36:        # 交换机IP LEAF1
+    user: admin
+    password: Rgsdn@2026
+
+    10.110.183.31:        # 交换机IP LEAF2
+    user: admin
+    password: Rgsdn@2026
+
+
+network:
+  roce_priority: 5    
+  config_cache_ttl: 300
+  topology_mode: ssh
+  leaf_ips:
+    - 10.110.183.36
+    - 10.110.183.31
+  spine_ips:
+    - 10.110.183.168
+    - 10.110.183.105
+  servers:
+    198.18.139.8: node4
+    198.18.141.8: node5
+"@

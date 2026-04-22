@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: showshow
+Version: 0.1.0
+Summary: GPU Fabric Network Diagnostics - 训练慢了？ShowShow一下
+Requires-Python: >=3.9
+Requires-Dist: typer[all]>=0.9.0
+Requires-Dist: requests>=2.31.0
+Requires-Dist: paramiko>=3.0.0
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: rich>=13.0.0
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
