@@ -1,6 +1,6 @@
 onc:
-  host: 172.28.200.80
-  port: 18080
+  host: 192.168.1.100        # ONC控制器IP
+  port: 443                  # HTTPS用443，HTTP用18080
   timeout: 30
 
 ssh:
@@ -8,19 +8,40 @@ ssh:
   default_password: ""
   default_port: 22
 
-  # 跳板机配置（没有跳板机就删掉这段或留空）
-  jump_host:
-    host: 10.110.181.132
-    port: 2222
-    user: h20_public
-    password: "Public@12"
+  # 跳板机配置（没有跳板机就删掉这段或留空）  一般都没有，除了实验环境之类
+  # jump_host:
+  #   host: 10.0.0.1
+  #   port: 2222
+  #   user: jumpuser
+  #   password: "jumppassword"
 
-  # 按节点覆盖SSH凭证（可选，交换机密码和服务器不同时用）
+  # 按节点覆盖SSH凭证（交换机和服务器密码不同时用）
   nodes:
-    # 172.28.200.101:        # 交换机IP
-    #   user: 58admin
-    #   password: yourpassword
+    # 交换机示例（LEAF）
+    # 192.168.10.1:
+    #   user: admin
+    #   password: "switch_password"
+
+    # 服务器示例
+    # 192.168.20.1:
+    #   user: root
+    #   password: "server_password"
 
 network:
-  roce_priority: 3        # RoCE流量的PFC Priority，P3或P4
-  config_cache_ttl: 300   # 设备配置缓存TTL，单位秒，默认5分钟
+  roce_priority: 3          # RoCE流量的PFC Priority，P3或P4
+  config_cache_ttl: 300     # 设备配置缓存TTL，单位秒，默认5分钟
+  topology_mode: ssh        # 拓扑模式：ssh
+
+  leaf_ips:
+    - 192.168.10.1          # LEAF交换机IP
+    - 192.168.10.2
+
+  spine_ips:
+    - 192.168.10.9          # SPINE交换机IP
+    - 192.168.10.10
+
+  # GPU服务器 IP → hostname 映射（hostname需与ONC拓扑中一致）
+  servers:
+    192.168.20.1: gpu-node-01
+    192.168.20.2: gpu-node-02
+    192.168.20.3: gpu-node-03
