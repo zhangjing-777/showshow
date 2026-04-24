@@ -1,8 +1,34 @@
-"""ONC REST API 封装"""
+"""ONC REST API 封装 - 适配 HTTPS + RSA+password 认证"""
 import time
+import base64
 import requests
+import urllib3
 from typing import Any, Dict, List, Optional
 from showshow.core.config import get_config
+
+# 禁用自签证书警告
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# ONC登录固定参数
+_ONC_CLIENT_AUTH = "Basic d2ViX2FwcDpyZ3Nkbg=="   # web_app:rgsdbn，固定
+_ONC_USERNAME    = "admin"
+_ONC_PASSWORD    = "Ruijie@123"
+
+
+def _rsa_encrypt(public_key_b64: str, plaintext: str) -> str:
+    """用ONC返回的RSA公钥加密明文，返回Base64密文"""
+    from Crypto.PublicKey import RSA
+    from Crypto.Cipher import PKCS1_v1_5
+
+    pem = (
+        "-----BEGIN PUBLIC KEY-----\n"
+        + public_key_b64
+        + "\n-----END PUBLIC KEY-----"
+    )
+    key = RSA.import_key(pem)
+    cipher = PKCS1_v1_5.new(key)
+    encrypted = cipher.encrypt(plaintext.encode("utf-8"))
+    return base64.b64encode(encrypted).decode("utf-8")
 
 
 class ONCClient:
@@ -12,24 +38,47 @@ class ONCClient:
         self.cfg = get_config().onc
         self._token: Optional[str] = None
         self._token_expire: float = 0
+        self._session = requests.Session()
+        self._session.verify = False   # 跳过自签证书
 
     # ------------------------------------------------------------------
     # 鉴权
     # ------------------------------------------------------------------
+    def _get_public_key(self) -> str:
+        """获取RSA公钥"""
+        resp = self._session.get(
+            f"{self.cfg.base_url}/uaa/api/v1/rsa/public",
+            timeout=self.cfg.timeout,
+        )
+        resp.raise_for_status()
+        return resp.json()["publicKey"]
+
     def _get_token(self) -> str:
         if self._token and time.time() < self._token_expire:
             return self._token
 
-        resp = requests.post(
-            f"{self.cfg.base_url}/uaa/oauth/token",
-            headers={"Authorization": "Basic aW50ZXJuYWw6aW50ZXJuYWw="},
-            data={"grant_type": "client_credentials", "scope": "web-app"},
+        # Step1: 拿公钥
+        pub_key = self._get_public_key()
+
+        # Step2: RSA加密密码
+        encrypted_password = _rsa_encrypt(pub_key, _ONC_PASSWORD)
+
+        # Step3: 登录
+        resp = self._session.post(
+            f"{self.cfg.base_url}/auth/token",
+            headers={"Authorization": _ONC_CLIENT_AUTH},
+            data={
+                "username": _ONC_USERNAME,
+                "password": encrypted_password,
+                "grant_type": "password",
+                "encrypt": "true",
+            },
             timeout=self.cfg.timeout,
         )
         resp.raise_for_status()
         data = resp.json()
         self._token = data["access_token"]
-        self._token_expire = time.time() + data["expires_in"] - 60  # 提前60s刷新
+        self._token_expire = time.time() + data.get("expires_in", 604800) - 60
         return self._token
 
     def _headers(self) -> Dict[str, str]:
@@ -39,7 +88,7 @@ class ONCClient:
         }
 
     def _get(self, path: str, params: Dict = None) -> Any:
-        resp = requests.get(
+        resp = self._session.get(
             f"{self.cfg.base_url}{path}",
             headers=self._headers(),
             params=params or {},
@@ -49,7 +98,7 @@ class ONCClient:
         return resp.json()
 
     def _post(self, path: str, body: Dict) -> Any:
-        resp = requests.post(
+        resp = self._session.post(
             f"{self.cfg.base_url}{path}",
             headers={**self._headers(), "Content-Type": "application/json"},
             json=body,
@@ -133,7 +182,7 @@ class ONCClient:
             "slot": slot,
             "port": port,
             "timeLimit": {
-                "startTime": start_time or (now_ms - 3600_000),  # 默认1小时
+                "startTime": start_time or (now_ms - 3600_000),
                 "endTime": end_time or now_ms,
             },
         }
